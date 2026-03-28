@@ -37,14 +37,15 @@ function cleanOutput(text) {
  * Export aisona data to a specific tool's config file
  */
 export function exportToTool(aisona, toolId, dir) {
-  const template = loadTemplate(toolId);
-  if (!template) {
-    return { success: false, error: `No template found for tool: ${toolId}` };
-  }
-
+  // Check enabled BEFORE loading template
   const toolConfig = aisona.tools?.[toolId];
   if (toolConfig && toolConfig.enabled === false) {
     return { success: false, error: `Tool ${toolId} is disabled in aisona.yml` };
+  }
+
+  const template = loadTemplate(toolId);
+  if (!template) {
+    return { success: false, error: `No template found for tool: ${toolId}` };
   }
 
   const output = cleanOutput(template(aisona));

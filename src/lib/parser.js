@@ -62,7 +62,15 @@ export function parseClaudeMd(filePath) {
       .join(' ')
       .trim();
 
-    if (rulesSections.some(s => section.includes(s))) {
+    // Order matters: check more specific sections first to avoid false matches
+    // e.g., "teaching style" should match teaching, not style/preferences
+    if (teachingSections.some(s => section.includes(s))) {
+      if (prose) result.personality.teaching = prose;
+      result.preferences.push(...bullets);
+    } else if (personalitySections.some(s => section.includes(s))) {
+      if (prose) result.personality.tone = prose;
+      result.personality.style.push(...bullets);
+    } else if (rulesSections.some(s => section.includes(s))) {
       result.rules.push(...bullets);
       if (prose && section.includes('autonomy')) {
         result.personality.autonomy = prose;
@@ -72,11 +80,6 @@ export function parseClaudeMd(filePath) {
       if (bullets.length > 0 && !result.personality.tone) {
         result.personality.style.push(...bullets);
       }
-    } else if (personalitySections.some(s => section.includes(s))) {
-      if (prose) result.personality.tone = prose;
-      result.personality.style.push(...bullets);
-    } else if (teachingSections.some(s => section.includes(s))) {
-      if (prose) result.personality.teaching = prose;
       result.preferences.push(...bullets);
     } else if (memorySections.some(s => section.includes(s))) {
       result.memories.push(...bullets);
