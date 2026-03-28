@@ -1,5 +1,5 @@
 {
-  "name": "aisona",
+  "name": "@mcpware/aisona",
   "version": "0.0.1",
   "description": "Own your AI's persona. Define it once, use it everywhere. Structured YAML format + CLI to export your AI personality to Claude, Cursor, Gemini, Copilot and more.",
   "type": "module",
