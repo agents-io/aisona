@@ -1,5 +1,5 @@
 {
-  "name": "@mcpware/aisona",
+  "name": "@agents-io/aisona",
   "version": "0.0.1",
   "description": "Own your AI's persona. Define it once, use it everywhere. Structured YAML format + CLI to export your AI personality to Claude, Cursor, Gemini, Copilot and more.",
   "type": "module",
@@ -24,14 +24,14 @@
     "dotfiles",
     "cli"
   ],
-  "author": "mcpware",
+  "author": "agents-io",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mcpware/aisona.git"
+    "url": "git+https://github.com/agents-io/aisona.git"
   },
-  "homepage": "https://github.com/mcpware/aisona",
+  "homepage": "https://github.com/agents-io/aisona",
   "bugs": {
-    "url": "https://github.com/mcpware/aisona/issues"
+    "url": "https://github.com/agents-io/aisona/issues"
   }
 }
