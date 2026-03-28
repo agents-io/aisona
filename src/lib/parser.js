@@ -10,9 +10,10 @@ import path from 'path';
 /**
  * Parse a CLAUDE.md file into structured sections.
  * CLAUDE.md is free-form markdown, so we use heuristics:
- * - H2 headers (##) = section boundaries
- * - Bullet points = rules/preferences
- * - Prose = personality/context
+ * - H2/H3 headers = section boundaries
+ * - Bullet points (- or *) = extractable items
+ * - Numbered lists (1. 2. 3.) = extractable items
+ * - Prose paragraphs = context/description
  */
 export function parseClaudeMd(filePath) {
   const content = fs.readFileSync(filePath, 'utf8');
@@ -29,11 +30,13 @@ export function parseClaudeMd(filePath) {
   let currentSection = '_preamble';
 
   for (const line of lines) {
-    // Detect H2 headers
-    const h2Match = line.match(/^##\s+(.+)/);
-    if (h2Match) {
-      currentSection = h2Match[1].trim().toLowerCase();
-      result.raw_sections[currentSection] = [];
+    // Detect H2 or H3 headers as section boundaries
+    const headerMatch = line.match(/^#{2,3}\s+(.+)/);
+    if (headerMatch) {
+      currentSection = headerMatch[1].trim().toLowerCase();
+      if (!result.raw_sections[currentSection]) {
+        result.raw_sections[currentSection] = [];
+      }
       continue;
     }
 
@@ -43,51 +46,119 @@ export function parseClaudeMd(filePath) {
     result.raw_sections[currentSection].push(line);
   }
 
-  // Extract rules from common section names
-  const rulesSections = ['rules', 'autonomy', 'constraints', 'boundaries', 'hard rules'];
-  const prefsSections = ['preferences', 'style', 'code style', 'coding style', 'conventions'];
-  const personalitySections = ['language', 'tone', 'communication', 'personality', 'tone and style'];
-  const teachingSections = ['teaching', 'teaching style', 'learning', 'explanations', 'technical explanations'];
-  const memorySections = ['memory', 'memories', 'learned', 'context', 'project knowledge capture'];
+  // Section classification — ordered by specificity (most specific first)
+  const sectionMap = [
+    { keywords: ['teaching style', 'teaching angle'], category: 'teaching' },
+    { keywords: ['technical explanations', 'explanations'], category: 'teaching' },
+    { keywords: ['language'], category: 'language' },
+    { keywords: ['tone and style', 'tone', 'communication', 'personality'], category: 'personality' },
+    { keywords: ['autonomy'], category: 'autonomy' },
+    { keywords: ['rules', 'constraints', 'boundaries', 'hard rules'], category: 'rules' },
+    { keywords: ['style', 'code style', 'coding style', 'conventions', 'preferences'], category: 'preferences' },
+    { keywords: ['memory', 'memories', 'learned', 'context', 'project knowledge'], category: 'memories' },
+  ];
 
-  for (const [section, lines] of Object.entries(result.raw_sections)) {
-    const bullets = lines
-      .filter(l => l.match(/^[-*]\s+/))
-      .map(l => l.replace(/^[-*]\s+/, '').trim())
-      .filter(l => l.length > 0);
-
-    const prose = lines
-      .filter(l => !l.match(/^[-*]\s+/) && !l.match(/^#/) && l.trim().length > 0)
-      .map(l => l.trim())
-      .join(' ')
-      .trim();
-
-    // Order matters: check more specific sections first to avoid false matches
-    // e.g., "teaching style" should match teaching, not style/preferences
-    if (teachingSections.some(s => section.includes(s))) {
-      if (prose) result.personality.teaching = prose;
-      result.preferences.push(...bullets);
-    } else if (personalitySections.some(s => section.includes(s))) {
-      if (prose) result.personality.tone = prose;
-      result.personality.style.push(...bullets);
-    } else if (rulesSections.some(s => section.includes(s))) {
-      result.rules.push(...bullets);
-      if (prose && section.includes('autonomy')) {
-        result.personality.autonomy = prose;
+  function classifySection(sectionName) {
+    for (const entry of sectionMap) {
+      if (entry.keywords.some(k => sectionName.includes(k))) {
+        return entry.category;
       }
-    } else if (prefsSections.some(s => section.includes(s))) {
-      result.preferences.push(...bullets);
-      if (bullets.length > 0 && !result.personality.tone) {
+    }
+    return 'unknown';
+  }
+
+  for (const [section, sectionLines] of Object.entries(result.raw_sections)) {
+    if (section === '_preamble') continue;
+
+    const category = classifySection(section);
+
+    // Extract bullet points (- item, * item) and numbered lists (1. item)
+    const bullets = sectionLines
+      .filter(l => l.match(/^\s*[-*]\s+/) || l.match(/^\s*\d+\.\s+/))
+      .map(l => l.replace(/^\s*[-*]\s+/, '').replace(/^\s*\d+\.\s+/, '').trim())
+      .filter(l => l.length > 0 && !l.match(/^\*\*[^*]+\*\*$/)); // skip standalone bold headers
+
+    // Extract prose — non-bullet, non-header, non-empty lines
+    const proseLines = sectionLines
+      .filter(l =>
+        !l.match(/^\s*[-*]\s+/) &&
+        !l.match(/^\s*\d+\.\s+/) &&
+        !l.match(/^#{1,4}\s+/) &&
+        !l.match(/^---\s*$/) &&
+        l.trim().length > 0
+      )
+      .map(l => l.trim());
+
+    // First meaningful prose line (for short descriptions)
+    const firstProse = proseLines[0] || '';
+    // Full prose (for longer sections)
+    const fullProse = proseLines.join(' ').trim();
+
+    switch (category) {
+      case 'language':
+        result.personality.tone = firstProse || fullProse;
         result.personality.style.push(...bullets);
-      }
-      result.preferences.push(...bullets);
-    } else if (memorySections.some(s => section.includes(s))) {
-      result.memories.push(...bullets);
-    } else {
-      // Unknown sections — add bullets as preferences
-      if (bullets.length > 0) {
+        break;
+
+      case 'personality':
+        if (fullProse) result.personality.tone = fullProse;
+        result.personality.style.push(...bullets);
+        break;
+
+      case 'teaching':
+        // For teaching, extract first paragraph as summary, bullets as preferences
+        if (firstProse) {
+          // If we already have teaching, append. Otherwise set.
+          result.personality.teaching = result.personality.teaching
+            ? result.personality.teaching + ' ' + firstProse
+            : firstProse;
+        }
+        // Bullets from teaching sections go to preferences (they're style guides)
         result.preferences.push(...bullets);
+        break;
+
+      case 'autonomy': {
+        // Autonomy sections mix prose and rules. Extract both.
+        // Prose lines that start with "Always" or "Never" or "Only" are rules
+        const autonomyRules = proseLines.filter(l =>
+          l.match(/^(Always|Never|Only|Do not|Don't)\b/i)
+        );
+        const autonomyProse = proseLines.filter(l =>
+          !l.match(/^(Always|Never|Only|Do not|Don't)\b/i)
+        ).join(' ').trim();
+
+        if (autonomyProse) result.personality.autonomy = autonomyProse;
+        result.rules.push(...autonomyRules);
+        result.rules.push(...bullets);
+        break;
       }
+
+      case 'rules':
+        result.rules.push(...bullets);
+        if (fullProse && !bullets.length) {
+          // If rules section has prose but no bullets, treat prose as a rule
+          result.rules.push(fullProse);
+        }
+        break;
+
+      case 'preferences':
+        result.preferences.push(...bullets);
+        break;
+
+      case 'memories':
+        result.memories.push(...bullets);
+        if (fullProse && !bullets.length) {
+          result.memories.push(fullProse);
+        }
+        break;
+
+      case 'unknown':
+      default:
+        // Unknown sections — bullets go to preferences, prose to memories
+        if (bullets.length > 0) {
+          result.preferences.push(...bullets);
+        }
+        break;
     }
   }
 
