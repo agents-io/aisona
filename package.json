@@ -1,0 +1,37 @@
+{
+  "name": "aisona",
+  "version": "0.0.1",
+  "description": "Own your AI's persona. Define it once, use it everywhere. Structured YAML format + CLI to export your AI personality to Claude, Cursor, Gemini, Copilot and more.",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": {
+    "aisona": "bin/aisona.js"
+  },
+  "scripts": {
+    "start": "node bin/aisona.js",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "keywords": [
+    "ai",
+    "persona",
+    "claude",
+    "cursor",
+    "gemini",
+    "copilot",
+    "config",
+    "sync",
+    "personality",
+    "dotfiles",
+    "cli"
+  ],
+  "author": "mcpware",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mcpware/aisona.git"
+  },
+  "homepage": "https://github.com/mcpware/aisona",
+  "bugs": {
+    "url": "https://github.com/mcpware/aisona/issues"
+  }
+}
