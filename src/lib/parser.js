@@ -20,9 +20,8 @@ export function parseClaudeMd(filePath) {
   const lines = content.split('\n');
 
   const result = {
-    personality: { tone: '', style: [], teaching: '', autonomy: '' },
+    preferences: { tone: '', habits: [], teaching: '', autonomy: '' },
     rules: [],
-    preferences: [],
     memories: [],
     raw_sections: {},
   };
@@ -96,25 +95,25 @@ export function parseClaudeMd(filePath) {
 
     switch (category) {
       case 'language':
-        result.personality.tone = firstProse || fullProse;
-        result.personality.style.push(...bullets);
+        result.preferences.tone = firstProse || fullProse;
+        result.preferences.habits.push(...bullets);
         break;
 
       case 'personality':
-        if (fullProse) result.personality.tone = fullProse;
-        result.personality.style.push(...bullets);
+        if (fullProse) result.preferences.tone = fullProse;
+        result.preferences.habits.push(...bullets);
         break;
 
       case 'teaching':
         // For teaching, extract first paragraph as summary, bullets as preferences
         if (firstProse) {
           // If we already have teaching, append. Otherwise set.
-          result.personality.teaching = result.personality.teaching
-            ? result.personality.teaching + ' ' + firstProse
+          result.preferences.teaching = result.preferences.teaching
+            ? result.preferences.teaching + ' ' + firstProse
             : firstProse;
         }
         // Bullets from teaching sections go to preferences (they're style guides)
-        result.preferences.push(...bullets);
+        result.preferences.habits.push(...bullets);
         break;
 
       case 'autonomy': {
@@ -127,7 +126,7 @@ export function parseClaudeMd(filePath) {
           !l.match(/^(Always|Never|Only|Do not|Don't)\b/i)
         ).join(' ').trim();
 
-        if (autonomyProse) result.personality.autonomy = autonomyProse;
+        if (autonomyProse) result.preferences.autonomy = autonomyProse;
         result.rules.push(...autonomyRules);
         result.rules.push(...bullets);
         break;
@@ -142,7 +141,7 @@ export function parseClaudeMd(filePath) {
         break;
 
       case 'preferences':
-        result.preferences.push(...bullets);
+        result.preferences.habits.push(...bullets);
         break;
 
       case 'memories':
@@ -156,7 +155,7 @@ export function parseClaudeMd(filePath) {
       default:
         // Unknown sections — bullets go to preferences, prose to memories
         if (bullets.length > 0) {
-          result.preferences.push(...bullets);
+          result.preferences.habits.push(...bullets);
         }
         break;
     }

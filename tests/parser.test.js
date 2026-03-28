@@ -10,194 +10,101 @@ beforeEach(() => fs.mkdirSync(TMP, { recursive: true }));
 afterEach(() => fs.rmSync(TMP, { recursive: true, force: true }));
 
 describe('parseClaudeMd', () => {
-  it('parses a simple CLAUDE.md with rules and preferences', () => {
-    const content = `## Language
+  it('parses rules and habits from simple CLAUDE.md', () => {
+    const content = `## Language\n\nAlways reply in Cantonese.\n\n## Rules\n\n- Never commit without asking\n- Never push to remote\n\n## Preferences\n\n- Use Playwright for testing\n- Short responses\n`;
+    fs.writeFileSync(path.join(TMP, 'CLAUDE.md'), content);
 
-Always reply in Cantonese.
-
-## Rules
-
-- Never commit without asking
-- Never push to remote without asking
-
-## Preferences
-
-- Use Playwright for testing
-- Short responses preferred
-`;
-    const filePath = path.join(TMP, 'CLAUDE.md');
-    fs.writeFileSync(filePath, content);
-
-    const result = parseClaudeMd(filePath);
+    const result = parseClaudeMd(path.join(TMP, 'CLAUDE.md'));
     expect(result.rules).toContain('Never commit without asking');
-    expect(result.rules).toContain('Never push to remote without asking');
-    expect(result.preferences).toContain('Use Playwright for testing');
+    expect(result.rules).toContain('Never push to remote');
+    expect(result.preferences.habits).toContain('Use Playwright for testing');
   });
 
-  it('extracts personality from tone/style sections', () => {
-    const content = `## Tone and Style
+  it('extracts tone from personality sections', () => {
+    const content = `## Tone and Style\n\nBe concise and direct.\n\n- No emojis unless asked\n- Short sentences\n`;
+    fs.writeFileSync(path.join(TMP, 'CLAUDE.md'), content);
 
-Be concise and direct.
-
-- No emojis unless asked
-- Short sentences
-`;
-    const filePath = path.join(TMP, 'CLAUDE.md');
-    fs.writeFileSync(filePath, content);
-
-    const result = parseClaudeMd(filePath);
-    expect(result.personality.tone).toContain('concise and direct');
-    expect(result.personality.style).toContain('No emojis unless asked');
+    const result = parseClaudeMd(path.join(TMP, 'CLAUDE.md'));
+    expect(result.preferences.tone).toContain('concise and direct');
+    expect(result.preferences.habits).toContain('No emojis unless asked');
   });
 
-  it('extracts autonomy from autonomy section', () => {
-    const content = `## Autonomy
+  it('extracts autonomy rules', () => {
+    const content = `## Autonomy\n\nWork autonomously.\n\nAlways ask before git push.\nNever ask before reading files.\n\n- Destructive actions need confirmation\n`;
+    fs.writeFileSync(path.join(TMP, 'CLAUDE.md'), content);
 
-Work autonomously. Only ask before destructive actions.
-
-- Never ask before reading files
-- Always ask before git push
-`;
-    const filePath = path.join(TMP, 'CLAUDE.md');
-    fs.writeFileSync(filePath, content);
-
-    const result = parseClaudeMd(filePath);
-    expect(result.personality.autonomy).toContain('Work autonomously');
-    expect(result.rules).toContain('Never ask before reading files');
+    const result = parseClaudeMd(path.join(TMP, 'CLAUDE.md'));
+    expect(result.preferences.autonomy).toContain('Work autonomously');
+    expect(result.rules).toContain('Always ask before git push.');
+    expect(result.rules).toContain('Never ask before reading files.');
+    expect(result.rules).toContain('Destructive actions need confirmation');
   });
 
-  it('extracts teaching style', () => {
-    const content = `## Teaching Style
+  it('extracts teaching preferences', () => {
+    const content = `## Teaching Style\n\nThe user is a junior developer.\n\n- Frame lessons as reusable mental models\n- Never skip teaching\n`;
+    fs.writeFileSync(path.join(TMP, 'CLAUDE.md'), content);
 
-Explain like a senior engineer. Always include a learning section after tasks.
-
-- Frame lessons as reusable mental models
-- Never skip teaching even for simple tasks
-`;
-    const filePath = path.join(TMP, 'CLAUDE.md');
-    fs.writeFileSync(filePath, content);
-
-    const result = parseClaudeMd(filePath);
-    expect(result.personality.teaching).toContain('senior engineer');
-    expect(result.preferences).toContain('Frame lessons as reusable mental models');
-  });
-
-  it('handles Nicole real-world CLAUDE.md structure', () => {
-    // Simulates the structure of the actual ~/.claude/CLAUDE.md
-    const content = `## Language
-
-Always reply in Cantonese (廣東話) unless the user writes in another language or explicitly asks for English.
-
-## Technical Explanations
-
-When explaining code, explain it so the user can clearly picture what the computer is doing.
-
-- Show where data comes from and where it goes
-- Name the actual tables, functions, fields involved
-- Do not skip the hidden middle steps
-
-## Teaching Style
-
-The user is a junior developer (~11 months experience).
-
-- End every completed task with a learning section
-- Talk like a helpful senior engineer
-
-## Autonomy
-
-Work autonomously. Only ask for confirmation before:
-- Destructive actions: deleting files, dropping DB tables
-- Actions visible to others: pushing to remote, opening PRs
-
-## Project Knowledge Capture
-
-When working on projects, if you discover something reusable, mention it.
-
-- Check project docs before suggesting changes
-`;
-    const filePath = path.join(TMP, 'CLAUDE.md');
-    fs.writeFileSync(filePath, content);
-
-    const result = parseClaudeMd(filePath);
-
-    // Should extract rules from autonomy
-    expect(result.rules.length).toBeGreaterThan(0);
-
-    // Should extract teaching
-    expect(result.personality.teaching).toContain('junior developer');
-
-    // Should extract style from technical explanations
-    expect(result.preferences.some(p => p.includes('data comes from'))).toBe(true);
+    const result = parseClaudeMd(path.join(TMP, 'CLAUDE.md'));
+    expect(result.preferences.teaching).toContain('junior developer');
+    expect(result.preferences.habits).toContain('Frame lessons as reusable mental models');
   });
 
   it('handles empty CLAUDE.md', () => {
-    const filePath = path.join(TMP, 'CLAUDE.md');
-    fs.writeFileSync(filePath, '');
+    fs.writeFileSync(path.join(TMP, 'CLAUDE.md'), '');
 
-    const result = parseClaudeMd(filePath);
+    const result = parseClaudeMd(path.join(TMP, 'CLAUDE.md'));
     expect(result.rules).toEqual([]);
-    expect(result.preferences).toEqual([]);
+    expect(result.preferences.habits).toEqual([]);
+  });
+
+  it('handles Nicole real-world structure', () => {
+    const content = `## Language\n\nAlways reply in Cantonese.\n\n## Technical Explanations\n\nExplain step by step.\n\n- Show where data comes from\n- Name actual tables\n\n## Teaching Style\n\nThe user is a junior developer.\n\n- End tasks with learning section\n\n## Autonomy\n\nWork autonomously.\n\nAlways ask before committing.\nNever ask before reading files.\n\n- Destructive actions: deleting files\n- Actions visible to others: pushing\n\n## Project Knowledge Capture\n\n- Flag reusable discoveries\n`;
+    fs.writeFileSync(path.join(TMP, 'CLAUDE.md'), content);
+
+    const result = parseClaudeMd(path.join(TMP, 'CLAUDE.md'));
+    expect(result.rules.length).toBeGreaterThanOrEqual(4);
+    expect(result.preferences.teaching).toContain('junior developer');
+    expect(result.preferences.habits.some(h => h.includes('data comes from'))).toBe(true);
+    expect(result.memories.length).toBeGreaterThanOrEqual(1);
   });
 });
 
 describe('parseCursorRules', () => {
   it('extracts rules from .cursorrules', () => {
-    const content = `# Coding Rules
+    const content = `# Rules\n\n- Always use TypeScript\n- Prefer functional style\n\nUse concise names.\n`;
+    fs.writeFileSync(path.join(TMP, '.cursorrules'), content);
 
-- Always use TypeScript
-- Prefer functional style
-- No classes unless necessary
-
-Use concise variable names.
-`;
-    const filePath = path.join(TMP, '.cursorrules');
-    fs.writeFileSync(filePath, content);
-
-    const result = parseCursorRules(filePath);
+    const result = parseCursorRules(path.join(TMP, '.cursorrules'));
     expect(result.rules).toContain('Always use TypeScript');
-    expect(result.rules).toContain('Prefer functional style');
-    expect(result.context).toContain('concise variable names');
+    expect(result.context).toContain('concise names');
   });
 });
 
 describe('detectTools', () => {
   it('detects CLAUDE.md in project directory', () => {
     fs.writeFileSync(path.join(TMP, 'CLAUDE.md'), '# Test');
-
     const detected = detectTools(TMP);
-    const claude = detected.find(d => d.tool === 'claude' && d.scope === 'project');
-    expect(claude).toBeDefined();
+    expect(detected.find(d => d.tool === 'claude' && d.scope === 'project')).toBeDefined();
   });
 
   it('detects .cursorrules', () => {
     fs.writeFileSync(path.join(TMP, '.cursorrules'), '# Test');
-
-    const detected = detectTools(TMP);
-    const cursor = detected.find(d => d.tool === 'cursor');
-    expect(cursor).toBeDefined();
+    expect(detectTools(TMP).find(d => d.tool === 'cursor')).toBeDefined();
   });
 
   it('detects copilot instructions', () => {
     fs.mkdirSync(path.join(TMP, '.github'), { recursive: true });
     fs.writeFileSync(path.join(TMP, '.github', 'copilot-instructions.md'), '# Test');
-
-    const detected = detectTools(TMP);
-    const copilot = detected.find(d => d.tool === 'copilot');
-    expect(copilot).toBeDefined();
+    expect(detectTools(TMP).find(d => d.tool === 'copilot')).toBeDefined();
   });
 
   it('detects AGENTS.md', () => {
     fs.writeFileSync(path.join(TMP, 'AGENTS.md'), '# Test');
-
-    const detected = detectTools(TMP);
-    const agents = detected.find(d => d.tool === 'agentsmd');
-    expect(agents).toBeDefined();
+    expect(detectTools(TMP).find(d => d.tool === 'agentsmd')).toBeDefined();
   });
 
-  it('returns empty array for empty directory', () => {
-    const detected = detectTools(TMP);
-    // May detect global configs from ~/.claude etc, but no project-level
-    const projectLevel = detected.filter(d => d.scope === 'project');
+  it('returns empty for empty directory (project-level)', () => {
+    const projectLevel = detectTools(TMP).filter(d => d.scope === 'project');
     expect(projectLevel).toEqual([]);
   });
 });

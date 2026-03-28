@@ -59,15 +59,14 @@ export async function initCommand(options) {
       const parsed = parseClaudeMd(claudePath);
 
       // Merge parsed data into aisona
-      if (parsed.personality.tone) aisona.personality.tone = parsed.personality.tone;
-      if (parsed.personality.style.length) aisona.personality.style = parsed.personality.style;
-      if (parsed.personality.teaching) aisona.personality.teaching = parsed.personality.teaching;
-      if (parsed.personality.autonomy) aisona.personality.autonomy = parsed.personality.autonomy;
+      if (parsed.preferences.tone) aisona.preferences.tone = parsed.preferences.tone;
+      if (parsed.preferences.habits.length) aisona.preferences.habits = parsed.preferences.habits;
+      if (parsed.preferences.teaching) aisona.preferences.teaching = parsed.preferences.teaching;
+      if (parsed.preferences.autonomy) aisona.preferences.autonomy = parsed.preferences.autonomy;
       if (parsed.rules.length) aisona.rules = parsed.rules;
-      if (parsed.preferences.length) aisona.preferences = parsed.preferences;
       if (parsed.memories.length) aisona.memories = parsed.memories;
 
-      console.log(chalk.green(`  Imported: ${parsed.rules.length} rules, ${parsed.preferences.length} preferences, ${parsed.memories.length} memories\n`));
+      console.log(chalk.green(`  Imported: ${parsed.rules.length} rules, ${parsed.preferences.habits.length} habits, ${parsed.memories.length} memories\n`));
     }
   }
 

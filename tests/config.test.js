@@ -15,10 +15,10 @@ describe('getDefaultAisona', () => {
     expect(def.version).toBe(1);
     expect(def.identity).toBeDefined();
     expect(def.identity.name).toBe('');
-    expect(def.personality).toBeDefined();
-    expect(def.personality.tone).toBe('');
+    expect(def.preferences).toBeDefined();
+    expect(def.preferences.tone).toBe('');
+    expect(def.preferences.habits).toEqual([]);
     expect(def.rules).toEqual([]);
-    expect(def.preferences).toEqual([]);
     expect(def.memories).toEqual([]);
     expect(def.tools.claude.enabled).toBe(true);
     expect(def.tools.cursor.enabled).toBe(true);
@@ -32,7 +32,7 @@ describe('saveAisona + loadAisona roundtrip', () => {
     data.identity.name = 'Test User';
     data.identity.language = 'Cantonese';
     data.rules = ['Never commit without asking', 'Use feature branches'];
-    data.personality.tone = 'Direct and concise';
+    data.preferences.tone = 'Direct and concise';
     data.memories = ['User prefers short responses'];
 
     const filePath = path.join(TMP, 'aisona.yml');
@@ -44,20 +44,20 @@ describe('saveAisona + loadAisona roundtrip', () => {
     expect(loaded.identity.name).toBe('Test User');
     expect(loaded.identity.language).toBe('Cantonese');
     expect(loaded.rules).toEqual(['Never commit without asking', 'Use feature branches']);
-    expect(loaded.personality.tone).toBe('Direct and concise');
+    expect(loaded.preferences.tone).toBe('Direct and concise');
     expect(loaded.memories).toEqual(['User prefers short responses']);
   });
 
   it('preserves tool config through roundtrip', () => {
     const data = getDefaultAisona();
-    data.tools.claude.extra_rules = ['Explain like a debugger'];
+    data.tools.claude.extra = ['Explain like a debugger'];
     data.tools.cursor.enabled = false;
 
     const filePath = path.join(TMP, 'aisona.yml');
     saveAisona(filePath, data);
     const loaded = loadAisona(filePath);
 
-    expect(loaded.tools.claude.extra_rules).toEqual(['Explain like a debugger']);
+    expect(loaded.tools.claude.extra).toEqual(['Explain like a debugger']);
     expect(loaded.tools.cursor.enabled).toBe(false);
   });
 });
